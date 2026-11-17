@@ -66,8 +66,28 @@ def paired_bootstrap(a: Sequence[float], b: Sequence[float], *, n_resamples: int
     """a[i], b[i] = per-item mean over seeds, SAME items, SAME order.
     Return (mean(a)-mean(b), lo, hi) with scipy.stats.bootstrap(paired=True, method="percentile",
     rng=numpy.random.default_rng(rng)). If a == b everywhere return (0.0, 0.0, 0.0)."""
-    # TODO M4
-    raise NotImplementedError
+    import numpy as np
+    from scipy.stats import bootstrap
+
+    x = np.asarray(a, dtype=float)
+    y = np.asarray(b, dtype=float)
+    if x.shape != y.shape or x.ndim != 1:
+        raise ValueError(f"paired samples must be 1-D and the same length, got {x.shape} and {y.shape}")
+    if x.size == 0:
+        raise ValueError("paired_bootstrap needs at least one item")
+    if np.array_equal(x, y):
+        return (0.0, 0.0, 0.0)
+    d = float(x.mean() - y.mean())
+    diff = x - y
+    if x.size < 2 or np.all(diff == diff[0]):
+        return (d, d, d)   # every resample has the same mean difference: the percentile CI collapses to it
+
+    def mean_diff(s, t, axis=-1):
+        return np.mean(s, axis=axis) - np.mean(t, axis=axis)
+
+    res = bootstrap((x, y), mean_diff, paired=True, vectorized=True, n_resamples=n_resamples,
+                    confidence_level=confidence, method="percentile", rng=np.random.default_rng(rng))
+    return (d, float(res.confidence_interval.low), float(res.confidence_interval.high))
 
 
 def pass_at_k(n: int, c: int, k: int) -> float:
