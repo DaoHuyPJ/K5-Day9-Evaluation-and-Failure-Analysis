@@ -1,0 +1,3 @@
+# eval_set_sha hashes the eval set bytes: keep LF on every OS so the baseline matches CI.
+src/data/eval/*.jsonl text eol=lf
+src/data/eval/*.json text eol=lf

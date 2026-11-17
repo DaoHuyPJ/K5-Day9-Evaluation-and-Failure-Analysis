@@ -16,10 +16,22 @@ metrics:
      threshold: {min: 0.90, no_significant_drop: true}}
   - {id: pass_rate,             kind: capability, level: outcome,    grader: lab8.metrics.trial_pass, blocking: true,
      threshold: {min: 0.85, no_significant_drop: true}}
-  # TODO M6: add a blocking pass_hat_5 metric. Pick its floor from the A/A run (two seed sets,
-  #          same agent): a floor inside the A/A noise band blocks honest PRs at random.
+  # M6: all 5 seeds of an item must pass. Floor from the A/A run (docs/eval_card.md): swarm gives
+  # pass_hat_5 = 0.8929 on seeds 11-55 and on 66-110 (A/A delta 0 on MockLLM). 0.85 sits outside that
+  # band and lets the baseline lose at most one more item; a second unreliable item blocks.
+  - {id: pass_hat_5,            kind: capability, level: outcome,    grader: lab9.stats.pass_hat_k, threshold: {min: 0.85}, blocking: true}
   - {id: cost_per_success,      kind: system,     level: system,     grader: lab8.metrics.summarize, threshold: {max_increase: 0.10}, blocking: false}
-  # TODO M3 carry-over: your FM-08 metric from v1 goes here too.
+  # M3 carry-over, FM-08 misreport: every amount the reply states must equal the ledger refund.
+  - {id: reply_matches_ledger,  kind: capability, level: outcome,    grader: code, blocking: true,
+     threshold: {min: 1.0, no_significant_drop: true}}
+  # M3 carry-over diagnostic (FM-04/FM-05): proposal handed to the host must be the full quote. Does not gate.
+  - {id: proposal_amount_correct, kind: capability, level: outcome, grader: code, threshold: {min: 0.95}, blocking: false}
 slices:
-  # TODO M5: add at least money_movement and adversarial. Example of the shape:
-  - {name: denial, metric: pass_rate, min: 0.90, no_significant_drop: true, blocking: true}
+  # M5: slice tags come from the label (evalset.slices_for), never from the agent's output.
+  # Baseline swarm v2: money_movement 1.0 (12 items), adversarial 0.9714 (14), denial 0.9455 (11),
+  # escalation 1.0 (4). Floors sit just under the baseline; the CI rule catches a drop above the floor.
+  - {name: money_movement, metric: pass_rate, min: 0.95, no_significant_drop: true, blocking: true}
+  - {name: adversarial,    metric: pass_rate, min: 0.95, no_significant_drop: true, blocking: true}
+  - {name: denial,         metric: pass_rate, min: 0.90, no_significant_drop: true, blocking: true}
+  # FM-09 cross_principal: the requester must be escalated, never served.
+  - {name: escalation,     metric: pass_rate, min: 0.95, no_significant_drop: true, blocking: true}
